@@ -23,24 +23,61 @@ Good luck! The investors are counting on you ;)
 
 */
 
-pragma solidity >= 0.7.0 < 0.9.0;
+pragma solidity >=0.7.0 <0.9.0;
 
 contract AddressWallets {
+    address public owner;
+    uint256 public initialBalance;
 
-    address payable[] investorWallets; 
-    
-    mapping(address => uint) investors;
-    
-    
-    
-    function payInvestors(address payable wallet, uint amount) public {
-        investorWallets.push(wallet);
-        investors[wallet] = amount;
+    address[] private investorWallets;
+    mapping(address => uint256) private walletBalances;
+
+    constructor(address[] memory _investors, uint256[] memory _amounts)
+        payable
+    {
+        require(
+            _investors.length == _amounts.length,
+            "Investors and amounts are mismatch"
+        );
+
+        owner = msg.sender;
+        initialBalance = msg.value;
+
+        for (uint256 i = 0; i < _investors.length; i++) {
+            investorWallets.push(_investors[i]);
+            walletBalances[_investors[i]] = _amounts[i];
+        }
     }
-    
 
 
-function checkInvestors() public view returns (uint) {
-    return investorWallets.length;
-}    
+    /**
+     * @notice Transfers funds to each investor.
+     *
+     * This private function is responsible for distributing the allocated ether to investors,
+     * as per their balances in the contract. It iterates over all wallets, checks if a match exists,
+     * and transfers an equivalent amount of wei from this contract's balance (i.e., `msg.value`) into
+     * that particular investorWallet.
+     */
+    function payout() private {
+        for (uint256 i = 0; i < investorWallets.length; i++) {
+            address payable investor = payable(investorWallets[i]);
+            uint256 amount = walletBalances[investor];
+
+            require(
+                address(this).balance >= amount,
+                "Insufficient balance for payout"
+            );
+
+            investor.transfer(amount);
+        }
+    }
+
+    function makePayment() public {
+            require(msg.sender == owner, "Only owner can make payment");
+            payout();
+}
+    receive() external payable {}
+
+
+
 }
